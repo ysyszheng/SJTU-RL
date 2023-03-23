@@ -1,5 +1,6 @@
 import random
 
+
 class Grid:
     def __init__(self, position, value=.0, is_terminal=False):
         self.val = value
@@ -10,12 +11,11 @@ class Grid:
 
 
 class GridWorld:
-    def __init__(self, width, height, terminal_list, gamma, theta=.0001):
+    def __init__(self, width, height, terminal_list, gamma):
         self.w = width
         self.h = height
         self.terminal_list = terminal_list
         self.gamma = gamma
-        self.theta = theta
         self.r = -1
         self.grid_list = []
         for i in range(width*height):
@@ -56,44 +56,57 @@ class GridWorld:
             mov = random.choices(
                 list(self.grid_list[start].act.keys()), list(self.grid_list[start].act.values()))[0]
             if mov == 'n':
-                start -= self.w if start >= self.w else start
+                start -= self.w if start >= self.w else 0
             elif mov == 'e':
-                start += 1 if start % self.w != self.w-1 else start
+                start += 1 if start % self.w != self.w-1 else 0
             elif mov == 's':
-                start += self.w if start < self.w*(self.h-1) else start
+                start += self.w if start < self.w*(self.h-1) else 0
             elif mov == 'w':
-                start -= 1 if start % self.w != 0 else start
+                start -= 1 if start % self.w != 0 else 0
             episode.append(start)
         return episode
 
-    def first_visit_MC(self, episode_num=1000):
-        episode = self.generate_episode()
-        returns = []
-        G = 0
+    def first_visit_MC(self, episode_num=10000, alpha=.01):
         while episode_num:
             episode_num -= 1
-            for i in range(len(episode)-1, -1, -1):
+            episode = self.generate_episode()
+            G = 0
+            for i in range(len(episode)-2, -1, -1):
                 G = self.gamma*G+self.r
                 if episode[i] not in episode[:i]:
-                    self.grid_list[episode[i]].val += G
-            
-    
-    def every_visit_MC(self):
-        pass
-    
-    def TD(self, lambd = 0):
-        pass
-    
+                    self.grid_list[episode[i]].val += alpha * \
+                        (G-self.grid_list[episode[i]].val)
+
+    def every_visit_MC(self, episode_num=10000, alpha=.01):
+        while episode_num:
+            episode_num -= 1
+            episode = self.generate_episode()
+            G = 0
+            for i in range(len(episode)-2, -1, -1):
+                G = self.gamma*G+self.r
+                self.grid_list[episode[i]].val += alpha * \
+                    (G-self.grid_list[episode[i]].val)
+
+    def TD(self, episode_num=10000, alpha=.01):
+        while episode_num:
+            episode_num -= 1
+            episode = self.generate_episode()
+            for i in range(len(episode)-1):
+                self.grid_list[episode[i]].val += alpha * \
+                    (self.r+self.gamma*self.grid_list[episode[i+1]].val -
+                        self.grid_list[episode[i]].val)
+
+
 if __name__ == '__main__':
     gw1 = GridWorld(6, 6, [1, 35], 1)
-    print('First-Visit Monte-Carlo Policy Evaluation')
+    print('\nFirst-Visit Monte-Carlo Policy Evaluation')
     gw1.first_visit_MC()
     gw1.print_val()
     gw2 = GridWorld(6, 6, [1, 35], 1)
-    print('Every-Visit Monte-Carlo Policy Evaluation')
+    print('\nEvery-Visit Monte-Carlo Policy Evaluation')
     gw2.every_visit_MC()
     gw2.print_val()
     gw3 = GridWorld(6, 6, [1, 35], 1)
-    print('Temporal-Difference Policy Evaluation')
+    print('\nTemporal-Difference Policy Evaluation')
     gw3.TD()
     gw3.print_val()
