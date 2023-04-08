@@ -105,7 +105,7 @@ if __name__ == '__main__':
     print('\n Cliff Walking Env:')
     print(Cliff1)
     print(f'\n Sarsa: epsilon={eps}')
-    Cliff1.sarsa(epsilon=eps)
+    Cliff1.sarsa(epsilon=eps, num_episodes=100000)
     print(Cliff1)
     Cliff2 = Cliff(12, 4, start=36, goal=47, cliff_list=range(37, 47))
     print(f'\n Q-Learning: epsilon={eps}')
