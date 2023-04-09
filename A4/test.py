@@ -10,7 +10,7 @@ if __name__ == '__main__':
     state_size = env.observation_space.shape[0]
     action_size = env.action_space.n
     agent = DQNAgent(state_size, action_size)
-    agent.load("./dqn.pt")
+    agent.load("./models/dqn.pt")
     score_list = []
 
     for _ in range(100):
