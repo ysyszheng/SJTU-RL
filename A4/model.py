@@ -3,25 +3,16 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
-import gymnasium as gym
 import random
 from collections import deque
-import matplotlib.pyplot as plt
-import time
-from tqdm import tqdm
+from config import config, device
 
-device = 'cuda:3' if torch.cuda.is_available() else 'cpu'
-
-# Hyperparameters
-EPISODES = 1000
-BATCH_SIZE = 32
-GAMMA = 0.99
-EPSILON = 1.0
-EPSILON_DECAY = 0.999
-EPSILON_MIN = 0.01
-LEARNING_RATE = 0.001
-TARGET_UPDATE = 10
-MEMORY_SIZE = 10000
+GAMMA = config['gamma']
+EPSILON = config['epsilon']
+EPSILON_DECAY = config['epsilon_decay']
+EPSILON_MIN = config['epsilon_min']
+LEARNING_RATE = config['learning_rate']
+MEMORY_SIZE = config['memory_size']
 
 # DQN Agent
 class DQNAgent:
@@ -38,6 +29,7 @@ class DQNAgent:
         self.target_model = self.build_model()
         self.update_target_model()
         self.loss = []
+        self.score = []
 
     def build_model(self):
         model = nn.Sequential(
@@ -55,8 +47,8 @@ class DQNAgent:
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
 
-    def act(self, state):
-        if np.random.rand() <= self.epsilon:
+    def act(self, state, test=False):
+        if not test and np.random.rand() <= self.epsilon:
             return random.randrange(self.action_size)
         with torch.no_grad():
             state = torch.from_numpy(state).float().to(device)
@@ -78,7 +70,7 @@ class DQNAgent:
         Q_target = reward + (self.gamma * Q_next * (1 - done))
         loss = F.mse_loss(Q_value, Q_target)
         optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
-        # self.loss.append(loss.item())
+        self.loss.append(loss.item())
 
         self.model.zero_grad()
         loss.backward()
@@ -96,37 +88,4 @@ class DQNAgent:
     def save(self, path):
         torch.save(self.model.state_dict(), path)
 
-if __name__ == "__main__":
-    env = gym.make('MountainCar-v0').env # avoid truncation
-    state_size = env.observation_space.shape[0]
-    action_size = env.action_space.n
-    agent = DQNAgent(state_size, action_size)
-    done = False
-    batch_size = BATCH_SIZE
-
-    for e in tqdm(range(EPISODES)):
-        state, info = env.reset()
-        state = np.reshape(state, [1, state_size])
-        for time in range(500):
-            # env.render()
-            action = agent.act(state)
-            next_state, reward, done, truncated, info = env.step(action)
-            reward = reward if not done else -10
-            next_state = np.reshape(next_state, [1, state_size])
-            agent.remember(state, action, reward, next_state, done)
-            state = next_state
-            if done:
-                print("episode: {}/{}, score: {}, e: {:.2}"
-                      .format(e, EPISODES, time, agent.epsilon))
-                agent.loss.append(time)
-                break
-            if len(agent.memory) > batch_size:
-                agent.replay(batch_size)
-        if e % TARGET_UPDATE == 0:
-            agent.update_target_model()
-
-    agent.save("./dqn.pt")
-    plt.plot([i+1 for i in range(0, len(agent.loss), 2)], agent.loss[::2])
-    plt.ylabel('Episode Length')
-    plt.xlabel('Episode')
-    plt.savefig("./dqn.png", dpi=200)
+# Dueling DQN Agent
