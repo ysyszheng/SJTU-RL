@@ -5,7 +5,7 @@ import torch.optim as optim
 import numpy as np
 import random
 from collections import deque
-from config import config, device
+from config import config
 
 GAMMA = config['gamma']
 EPSILON = config['epsilon']
@@ -33,11 +33,11 @@ class DQNAgent:
 
     def build_model(self):
         model = nn.Sequential(
-            nn.Linear(self.state_size, 24),
+            nn.Linear(self.state_size, 64),
             nn.ReLU(),
-            nn.Linear(24, 24),
+            nn.Linear(64, 64),
             nn.ReLU(),
-            nn.Linear(24, self.action_size),
+            nn.Linear(64, self.action_size),
         )
         return model
 
@@ -51,20 +51,17 @@ class DQNAgent:
         if not test and np.random.rand() <= self.epsilon:
             return random.randrange(self.action_size)
         with torch.no_grad():
-            state = torch.from_numpy(state).float().to(device)
-            act_values = self.model(state).cpu()
-            return np.argmax(act_values[0]).detach().numpy()
+            act_values = self.model(torch.from_numpy(state).float())
+        return np.argmax(act_values[0].numpy())
 
     def replay(self, batch_size):
         minibatch = random.sample(self.memory, batch_size)
-        state = torch.from_numpy(np.vstack([i[0] for i in minibatch])).float().to(device)
-        action = torch.from_numpy(np.vstack([i[1] for i in minibatch])).long().to(device)
-        reward = torch.from_numpy(np.vstack([i[2] for i in minibatch])).float().to(device)
-        next_state = torch.from_numpy(np.vstack([i[3] for i in minibatch])).float().to(device)
-        done = torch.from_numpy(np.vstack([i[4] for i in minibatch]).astype(np.uint8)).float().to(device)
+        state = torch.from_numpy(np.vstack([i[0] for i in minibatch])).float()
+        action = torch.from_numpy(np.vstack([i[1] for i in minibatch])).long()
+        reward = torch.from_numpy(np.vstack([i[2] for i in minibatch])).float()
+        next_state = torch.from_numpy(np.vstack([i[3] for i in minibatch])).float()
+        done = torch.from_numpy(np.vstack([i[4] for i in minibatch]).astype(np.uint8)).float()
 
-        self.model.to(device)
-        self.target_model.to(device)
         Q_value = self.model(state).gather(1, action)
         Q_next = self.target_model(next_state).detach().max(1)[0].unsqueeze(1)
         Q_target = reward + (self.gamma * Q_next * (1 - done))
