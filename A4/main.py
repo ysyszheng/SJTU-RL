@@ -8,6 +8,9 @@ import random
 from collections import deque
 import matplotlib.pyplot as plt
 import time
+from tqdm import tqdm
+
+device = 'cuda:3' if torch.cuda.is_available() else 'cpu'
 
 # Hyperparameters
 EPISODES = 1000
@@ -56,18 +59,20 @@ class DQNAgent:
         if np.random.rand() <= self.epsilon:
             return random.randrange(self.action_size)
         with torch.no_grad():
-            state = torch.from_numpy(state).float()
-            act_values = self.model(state)
+            state = torch.from_numpy(state).float().to(device)
+            act_values = self.model(state).cpu()
             return np.argmax(act_values[0]).detach().numpy()
 
     def replay(self, batch_size):
         minibatch = random.sample(self.memory, batch_size)
-        state = torch.from_numpy(np.vstack([i[0] for i in minibatch])).float()
-        action = torch.from_numpy(np.vstack([i[1] for i in minibatch])).long()
-        reward = torch.from_numpy(np.vstack([i[2] for i in minibatch])).float()
-        next_state = torch.from_numpy(np.vstack([i[3] for i in minibatch])).float()
-        done = torch.from_numpy(np.vstack([i[4] for i in minibatch]).astype(np.uint8)).float()
+        state = torch.from_numpy(np.vstack([i[0] for i in minibatch])).float().to(device)
+        action = torch.from_numpy(np.vstack([i[1] for i in minibatch])).long().to(device)
+        reward = torch.from_numpy(np.vstack([i[2] for i in minibatch])).float().to(device)
+        next_state = torch.from_numpy(np.vstack([i[3] for i in minibatch])).float().to(device)
+        done = torch.from_numpy(np.vstack([i[4] for i in minibatch]).astype(np.uint8)).float().to(device)
 
+        self.model.to(device)
+        self.target_model.to(device)
         Q_value = self.model(state).gather(1, action)
         Q_next = self.target_model(next_state).detach().max(1)[0].unsqueeze(1)
         Q_target = reward + (self.gamma * Q_next * (1 - done))
@@ -84,25 +89,26 @@ class DQNAgent:
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
 
-    def load(self, name):
-        self.model.load_weights(name)
+    def load(self, path):
+        self.model.load_state_dict(torch.load(path))
+        self.model.eval()
 
-    def save(self, name):
-        self.model.save_weights(name)
+    def save(self, path):
+        torch.save(self.model.state_dict(), path)
 
 if __name__ == "__main__":
-    env = gym.make('MountainCar-v0', render_mode='human').env # avoid truncation
+    env = gym.make('MountainCar-v0').env # avoid truncation
     state_size = env.observation_space.shape[0]
     action_size = env.action_space.n
     agent = DQNAgent(state_size, action_size)
     done = False
     batch_size = BATCH_SIZE
 
-    for e in range(EPISODES):
+    for e in tqdm(range(EPISODES)):
         state, info = env.reset()
         state = np.reshape(state, [1, state_size])
         for time in range(500):
-            env.render()
+            # env.render()
             action = agent.act(state)
             next_state, reward, done, truncated, info = env.step(action)
             reward = reward if not done else -10
@@ -119,8 +125,8 @@ if __name__ == "__main__":
         if e % TARGET_UPDATE == 0:
             agent.update_target_model()
 
-    # agent.save("./save/mountaincar-dqn.h5")
+    agent.save("./dqn.pt")
     plt.plot([i+1 for i in range(0, len(agent.loss), 2)], agent.loss[::2])
     plt.ylabel('Episode Length')
     plt.xlabel('Episode')
-    plt.show()
+    plt.savefig("./dqn.png", dpi=200)
