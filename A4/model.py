@@ -6,6 +6,7 @@ import numpy as np
 import random
 from collections import deque
 from config import config
+import matplotlib.pyplot as plt
 
 GAMMA = config['gamma']
 EPSILON = config['epsilon']
@@ -27,19 +28,25 @@ class DQNAgent:
         self.learning_rate = LEARNING_RATE
         self.model = self.build_model()
         self.target_model = self.build_model()
+        # self.model.apply(self.init_weights)
         self.update_target_model()
         self.loss = []
         self.score = []
 
     def build_model(self):
         model = nn.Sequential(
-            nn.Linear(self.state_size, 64),
+            nn.Linear(self.state_size, 256),
             nn.ReLU(),
-            nn.Linear(64, 64),
+            nn.Linear(256, 256),
             nn.ReLU(),
-            nn.Linear(64, self.action_size),
+            nn.Linear(256, self.action_size),
         )
         return model
+    
+    def init_weights(self, m):
+        if type(m) == nn.Linear:
+            torch.nn.init.xavier_uniform(m.weight)
+            m.bias.data.fill_(0.01)
 
     def update_target_model(self):
         self.target_model.load_state_dict(self.model.state_dict())
@@ -47,8 +54,8 @@ class DQNAgent:
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
 
-    def act(self, state, test=False):
-        if not test and np.random.rand() <= self.epsilon:
+    def act(self, state):
+        if self.model.training and (np.random.rand() <= self.epsilon):
             return random.randrange(self.action_size)
         with torch.no_grad():
             act_values = self.model(torch.from_numpy(state).float())
@@ -71,8 +78,8 @@ class DQNAgent:
 
         self.model.zero_grad()
         loss.backward()
-        for param in self.model.parameters():
-            param.grad.data.clamp_(-1, 1)
+        # for param in self.model.parameters():
+        #     param.grad.data.clamp_(-1, 1)
         optimizer.step()
 
         if self.epsilon > self.epsilon_min:
@@ -82,7 +89,21 @@ class DQNAgent:
         self.model.load_state_dict(torch.load(path))
         self.model.eval()
 
-    def save(self, path):
+    def savemodel(self, path):
         torch.save(self.model.state_dict(), path)
+
+    def saveloss(self, path):
+        plt.figure()
+        plt.plot(self.loss)
+        plt.ylabel('Loss')
+        plt.xlabel('Step')
+        plt.savefig(path, dpi=200)
+
+    def savescore(self, path):
+        plt.figure()
+        plt.plot(self.score)
+        plt.ylabel('Reward')
+        plt.xlabel('Episode')
+        plt.savefig(path, dpi=200)
 
 # Dueling DQN Agent
