@@ -5,6 +5,7 @@ from config import config
 from model import DQNAgent
 
 EPISODES = config['episode']
+MAX_STEPS = config['max_steps']
 BATCH_SIZE = config['batch_size']
 TARGET_UPDATE = config['target_update']
 
@@ -21,7 +22,8 @@ if __name__ == "__main__":
         terminated, truncated = False, False
         score, step = 0, 0
 
-        while not terminated and not truncated: # step, max_step = 200
+        # while not terminated and not truncated: # step
+        while not terminated and step <= MAX_STEPS: # step
             step += 1
             action = agent.act(state)
             next_state, reward, terminated, truncated, info = env.step(action)
@@ -38,8 +40,9 @@ if __name__ == "__main__":
         
         agent.score.append(score)
         bar.set_description("episode: {}/{}, score: {}, e: {:.2}"
-                    .format(e, EPISODES, score, agent.epsilon))
-
+                    .format(e+1, EPISODES, score, agent.epsilon))
+    
+    env.close()
     agent.savemodel("./models/dqn.pt")
     agent.saveloss("./images/dqn-loss.png")
     agent.savescore("./images/dqn-reward.png")

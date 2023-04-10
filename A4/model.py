@@ -14,6 +14,7 @@ EPSILON_DECAY = config['epsilon_decay']
 EPSILON_MIN = config['epsilon_min']
 LEARNING_RATE = config['learning_rate']
 MEMORY_SIZE = config['memory_size']
+EPOCH = config['epoch']
 
 # DQN Agent
 class DQNAgent:
@@ -28,24 +29,25 @@ class DQNAgent:
         self.learning_rate = LEARNING_RATE
         self.model = self.build_model()
         self.target_model = self.build_model()
-        # self.model.apply(self.init_weights)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
+        self.model.apply(self.init_weights)
         self.update_target_model()
         self.loss = []
         self.score = []
 
     def build_model(self):
         model = nn.Sequential(
-            nn.Linear(self.state_size, 256),
+            nn.Linear(self.state_size, 64),
             nn.ReLU(),
-            nn.Linear(256, 256),
+            nn.Linear(64, 64),
             nn.ReLU(),
-            nn.Linear(256, self.action_size),
+            nn.Linear(64, self.action_size),
         )
         return model
     
     def init_weights(self, m):
         if type(m) == nn.Linear:
-            torch.nn.init.xavier_uniform(m.weight)
+            m.weight.data.normal_(0.0, 1/np.sqrt(m.in_features))
             m.bias.data.fill_(0.01)
 
     def update_target_model(self):
@@ -57,30 +59,30 @@ class DQNAgent:
     def act(self, state):
         if self.model.training and (np.random.rand() <= self.epsilon):
             return random.randrange(self.action_size)
-        with torch.no_grad():
-            act_values = self.model(torch.from_numpy(state).float())
-        return np.argmax(act_values[0].numpy())
+        act_values = self.model(torch.from_numpy(state).float()).detach()
+        return torch.argmax(act_values[0]).item()
 
     def replay(self, batch_size):
-        minibatch = random.sample(self.memory, batch_size)
-        state = torch.from_numpy(np.vstack([i[0] for i in minibatch])).float()
-        action = torch.from_numpy(np.vstack([i[1] for i in minibatch])).long()
-        reward = torch.from_numpy(np.vstack([i[2] for i in minibatch])).float()
-        next_state = torch.from_numpy(np.vstack([i[3] for i in minibatch])).float()
-        done = torch.from_numpy(np.vstack([i[4] for i in minibatch]).astype(np.uint8)).float()
+        for _ in range(EPOCH):
+            minibatch = random.sample(self.memory, batch_size)
+            states = torch.from_numpy(np.vstack([i[0] for i in minibatch])).float()
+            actions = torch.from_numpy(np.vstack([i[1] for i in minibatch])).long()
+            rewards = torch.from_numpy(np.vstack([i[2] for i in minibatch])).float()
+            next_states = torch.from_numpy(np.vstack([i[3] for i in minibatch])).float()
+            dones = torch.from_numpy(np.vstack([i[4] for i in minibatch]).astype(np.uint8)).float()
 
-        Q_value = self.model(state).gather(1, action)
-        Q_next = self.target_model(next_state).detach().max(1)[0].unsqueeze(1)
-        Q_target = reward + (self.gamma * Q_next * (1 - done))
-        loss = F.mse_loss(Q_value, Q_target)
-        optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
-        self.loss.append(loss.item())
+            Q_expected = self.model(states).gather(1, actions)
+            Q_targets_next = self.target_model(next_states).detach().max(1)[0].unsqueeze(1)
+            Q_targets = rewards + (self.gamma * Q_targets_next * (1 - dones))
 
-        self.model.zero_grad()
-        loss.backward()
-        # for param in self.model.parameters():
-        #     param.grad.data.clamp_(-1, 1)
-        optimizer.step()
+            loss = F.mse_loss(Q_expected, Q_targets)
+            self.loss.append(loss.item())
+
+            self.model.zero_grad()
+            loss.backward()
+            for param in self.model.parameters():
+                param.grad.data.clamp_(-1, 1)
+            self.optimizer.step()
 
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
@@ -100,10 +102,36 @@ class DQNAgent:
         plt.savefig(path, dpi=200)
 
     def savescore(self, path):
+        avg_score = []
+        for i in range(len(self.score)):
+            avg_score.append(np.mean(self.score[max(0,i-100):(i+1)]))
+
         plt.figure()
         plt.plot(self.score)
+        plt.plot(avg_score, '-.')
+        plt.plot([0, len(self.score)], [-200, -200], 'r--')
+        plt.plot([0, len(self.score)], [-110, -110], 'g--')
         plt.ylabel('Reward')
         plt.xlabel('Episode')
+        plt.legend(['Reward', 'Average Reward', 'Truncated (-200)', 'Solved (-110)'], loc='lower right')
         plt.savefig(path, dpi=200)
 
 # Dueling DQN Agent
+# Q(s, a) = V(s) + A(s, a)
+class DuelingDQNAgent(DQNAgent):
+    def build_model(self):
+        model = nn.Sequential(
+            nn.Linear(self.state_size, 64),
+            nn.ReLU(),
+            nn.Linear(64, 64),
+            nn.ReLU(),
+            nn.Linear(64, 1),
+            nn.Linear(64, self.action_size),
+        )
+        return model
+
+    def act(self, state):
+        if self.model.training and (np.random.rand() <= self.epsilon):
+            return random.randrange(self.action_size)
+        act_values = self.model(torch.from_numpy(state).float()).detach()
+        return torch.argmax(act_values[0] + act_values[1] - act_values[1].mean()).item()
