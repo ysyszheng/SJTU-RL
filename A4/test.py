@@ -10,7 +10,9 @@ if __name__ == '__main__':
     state_size = env.observation_space.shape[0]
     action_size = env.action_space.n
     agent = DQNAgent(state_size, action_size)
-    agent.load("./models/dqn.pt")
+    # agent.load_model("./models/dqn.pt")
+    agent.load_model("./models/dueling-dqn.pt")
+    # agent.epsilon = 0.0
 
     for _ in range(100):
       score = 0
@@ -22,9 +24,8 @@ if __name__ == '__main__':
         reward = reward if not terminated else 0
         score += reward
 
-      print(f'reward: {score}')
       agent.score.append(score)
+      print(f'reward: {score}, average reward: {sum(agent.score)/len(agent.score)}')
       state, info = env.reset()
 
     env.close()
-    print(f'average reward: {sum(agent.score)/len(agent.score)}')
