@@ -23,20 +23,23 @@ if __name__ == "__main__":
         agent = DQNAgent(state_size, action_size)
         model_path = './models/dqn.pt'
         loss_path = './images/dqn-loss.png'
-        score_path = './images/dqn-score.png'
-        score_100_path = './images/dqn-last-100-reward.png'
+        score_path = './images/dqn-reward.png'
+        score_200_path = './images/dqn-reward-under-200.png'
+        score_100_path = './images/dqn-reward-last-100.png'
     elif args[1] == 'DoubleDQN':
         agent = DoubleDQNAgent(state_size, action_size)
         model_path = './models/double-dqn.pt'
         loss_path = './images/double-dqn-loss.png'
-        score_path = './images/double-dqn-score.png'
-        score_100_path = './images/double-dqn-last-100-reward.png'
+        score_path = './images/double-dqn-reward.png'
+        score_200_path = './images/double-dqn-reward-under-200.png'
+        score_100_path = './images/double-dqn-reward-last-100.png'
     elif args[1] == 'DuelingDQN':
         agent = DuelingDQNAgent(state_size, action_size)
         model_path = './models/dueling-dqn.pt'
         loss_path = './images/dueling-dqn-loss.png'
-        score_path = './images/dueling-dqn-score.png'
-        score_100_path = './images/dueling-dqn-last-100-reward.png'
+        score_path = './images/dueling-dqn-reward.png'
+        score_200_path = './images/dueling-dqn-reward-under-200.png'
+        score_100_path = './images/dueling-dqn-reward-last-100.png'
     else:
         print('Usage: python3 train.py DQN/DoubleDQN/DuelingDQN')
         exit(1)
@@ -55,6 +58,7 @@ if __name__ == "__main__":
             next_state, reward, terminated, truncated, info = env.step(action)
             reward = reward if not terminated else 0
             score += reward
+            # reward = 0.1*reward + (next_state[0] - 0.5) # TODO: test this reward function
             next_state = np.reshape(next_state, [1, state_size])
             agent.remember(state, action, reward, next_state, terminated)
             state = next_state
@@ -70,6 +74,7 @@ if __name__ == "__main__":
     
     env.close()
     agent.save_model(model_path)
-    agent.save_loss(loss_path)
+    # agent.save_loss(loss_path)
     agent.save_score(score_path)
+    agent.save_under_200_scores(score_200_path)
     agent.save_last_100_scores(score_100_path)

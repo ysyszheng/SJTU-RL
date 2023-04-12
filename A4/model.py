@@ -59,8 +59,10 @@ class DQNAgent:
     def act(self, state):
         if self.model.training and (np.random.rand() <= self.epsilon):
             return random.randrange(self.action_size)
-        act_values = self.model(torch.from_numpy(state).float()).detach()
-        return torch.argmax(act_values[0]).item()
+        state = torch.from_numpy(state).float()
+        with torch.no_grad():
+            act_values = self.model(state)
+        return torch.argmax(act_values).item()
 
     def replay(self, batch_size):
         for _ in range(EPOCH):
@@ -116,6 +118,23 @@ class DQNAgent:
         plt.legend(['Reward', 'Average Reward', 'Truncated (-200)', 'Solved (-110)'])
         plt.savefig(path, dpi=200)
 
+    def save_under_200_scores(self, path):
+        avg_score = []
+        for i in range(len(self.score)):
+            avg_score.append(np.mean(self.score[max(0,i-100):(i+1)]))
+        score_under_200 = [x if x >= -200 else -200 for x in self.score]
+        avg_score_under_200 = [x if x >= -200 else -200 for x in avg_score]
+        
+        plt.figure()
+        plt.plot(score_under_200)
+        plt.plot(avg_score_under_200, '-.')
+        plt.plot([0, len(self.score)], [-110, -110], 'g--')
+        plt.ylabel('Reward')
+        plt.xlabel('Episode')
+        plt.legend(['Reward', 'Average Reward', 'Solved (-110)'])
+        plt.savefig(path, dpi=200)
+
+
     def save_last_100_scores(self, path):
         last_100_score = self.score[-100:]
         avg_score = []
@@ -162,5 +181,60 @@ class DoubleDQNAgent(DQNAgent):
             self.epsilon *= self.epsilon_decay
 
 # Dueling DQN Agent
+class DuelingDQN(nn.Module):
+    def __init__(self, state_size, action_size):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(state_size, 64),
+            nn.ReLU(),
+            nn.Linear(64, 64),
+            nn.ReLU(),
+        )
+        self.V = nn.Sequential(
+            nn.Linear(64, 1)
+        )
+        self.A = nn.Sequential(
+            nn.Linear(64, action_size)
+        )
+
+    def forward(self, x):
+        x = self.net(x)
+        V = self.V(x)
+        A = self.A(x)
+        Q = V + (A - A.mean(dim=1, keepdim=True).expand_as(A))
+        return Q
+
 class DuelingDQNAgent(DQNAgent):
-    pass
+    def __init__(self, state_size, action_size):
+        super().__init__(state_size, action_size)
+        self.model = DuelingDQN(state_size, action_size)
+        self.target_model = DuelingDQN(state_size, action_size)
+        self.model.apply(self.init_weights)
+        self.update_target_model()
+    
+    def replay(self, batch_size):
+        for _ in range(EPOCH):
+            minibatch = random.sample(self.memory, batch_size)
+            states = torch.from_numpy(np.vstack([i[0] for i in minibatch])).float()
+            actions = torch.from_numpy(np.vstack([i[1] for i in minibatch])).long()
+            rewards = torch.from_numpy(np.vstack([i[2] for i in minibatch])).float()
+            next_states = torch.from_numpy(np.vstack([i[3] for i in minibatch])).float()
+            dones = torch.from_numpy(np.vstack([i[4] for i in minibatch]).astype(np.uint8)).float()
+
+            Q_expected = self.model(states).gather(1, actions)
+
+            max_action = self.model(next_states).detach().max(1)[1].unsqueeze(1)
+            Q_targets_next = self.target_model(next_states).detach().gather(1, max_action)
+            Q_targets = rewards + (self.gamma * Q_targets_next * (1 - dones))
+
+            loss = F.mse_loss(Q_expected, Q_targets)
+            self.loss.append(loss.item())
+
+            self.model.zero_grad()
+            loss.backward()
+            for param in self.model.parameters():
+                param.grad.data.clamp_(-1, 1)
+            self.optimizer.step()
+
+        if self.epsilon > self.epsilon_min:
+            self.epsilon *= self.epsilon_decay
