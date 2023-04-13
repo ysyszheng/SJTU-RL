@@ -58,7 +58,7 @@ if __name__ == "__main__":
             next_state, reward, terminated, truncated, info = env.step(action)
             reward = reward if not terminated else 0
             score += reward
-            # reward = 0.1*reward + (next_state[0] - 0.5) # TODO: test this reward function
+            # reward = reward + (next_state[1])**2 # TODO: test this reward function
             next_state = np.reshape(next_state, [1, state_size])
             agent.remember(state, action, reward, next_state, terminated)
             state = next_state

@@ -1,7 +1,7 @@
 config = {
   'episode': 1000, # 1000
   'max_steps': 10000,
-  'batch_size': 64,
+  'batch_size': 64, # 64
   'epoch': 2, # 2
   'gamma': 0.999,
   'epsilon': 1.0,

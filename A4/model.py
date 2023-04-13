@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+import torch.optim.lr_scheduler as lr_scheduler
 import numpy as np
 import random
 from collections import deque
@@ -30,6 +31,7 @@ class DQNAgent:
         self.model = self.build_model()
         self.target_model = self.build_model()
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
+        self.scheduler = lr_scheduler.StepLR(self.optimizer, step_size=200, gamma=0.999)
         self.model.apply(self.init_weights)
         self.update_target_model()
         self.loss = []
@@ -85,6 +87,7 @@ class DQNAgent:
             for param in self.model.parameters():
                 param.grad.data.clamp_(-1, 1)
             self.optimizer.step()
+            self.scheduler.step() # learning rate decay
 
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
@@ -176,6 +179,7 @@ class DoubleDQNAgent(DQNAgent):
             for param in self.model.parameters():
                 param.grad.data.clamp_(-1, 1)
             self.optimizer.step()
+            self.scheduler.step() # adapt learning rate
 
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
@@ -201,7 +205,7 @@ class DuelingDQN(nn.Module):
         x = self.net(x)
         V = self.V(x)
         A = self.A(x)
-        Q = V + (A - A.mean(dim=1, keepdim=True).expand_as(A))
+        Q = V + (A - A.mean())
         return Q
 
 class DuelingDQNAgent(DQNAgent):
@@ -211,6 +215,8 @@ class DuelingDQNAgent(DQNAgent):
         self.target_model = DuelingDQN(state_size, action_size)
         self.model.apply(self.init_weights)
         self.update_target_model()
+        self.optimizer = optim.Adam(self.model.parameters(), lr=0.01, weight_decay=0.01)
+        self.scheduler = lr_scheduler.StepLR(self.optimizer, step_size=10000, gamma=0.9)
     
     def replay(self, batch_size):
         for _ in range(EPOCH):
@@ -222,9 +228,12 @@ class DuelingDQNAgent(DQNAgent):
             dones = torch.from_numpy(np.vstack([i[4] for i in minibatch]).astype(np.uint8)).float()
 
             Q_expected = self.model(states).gather(1, actions)
-
+            # use DQN Alg
+            # Q_targets_next = self.target_model(next_states).detach().max(1)[0].unsqueeze(1)
+            # use DDQN Alg
             max_action = self.model(next_states).detach().max(1)[1].unsqueeze(1)
             Q_targets_next = self.target_model(next_states).detach().gather(1, max_action)
+
             Q_targets = rewards + (self.gamma * Q_targets_next * (1 - dones))
 
             loss = F.mse_loss(Q_expected, Q_targets)
@@ -232,9 +241,10 @@ class DuelingDQNAgent(DQNAgent):
 
             self.model.zero_grad()
             loss.backward()
-            for param in self.model.parameters():
-                param.grad.data.clamp_(-1, 1)
+            # for param in self.model.parameters():
+            #     param.grad.data.clamp_(-1, 1)
             self.optimizer.step()
+            self.scheduler.step()
 
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
