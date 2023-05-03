@@ -1,0 +1,3 @@
+random_seed: 3407
+batch_size: 32
+render: True

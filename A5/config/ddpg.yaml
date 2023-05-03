@@ -1,0 +1,17 @@
+seed: 3407
+num_episodes: 1000
+test_episodes: 100
+num_epochs: 2
+warmup_steps: 100
+max_steps: 200 # TODO: 1000, default: 200
+lr: .0001
+gamma: .99
+tau: .01
+batch_size: 32
+memory_size: 1000000
+render: True
+# render: False
+g: 10.
+noise_std: .01
+models_path: './modelset/ddpg/ddpg'
+images_path: './images/ddpg/'
