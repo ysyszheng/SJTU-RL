@@ -49,7 +49,7 @@ class Tester_DDPG(object):
             r.append(episode_reward)
             print('Episode Reward: {:.2f}'.format(episode_reward))
 
-        plt.figure(figsize=(10, 5))
+        plt.figure()
         plt.plot(r)
         plt.xlabel('Episode')
         plt.ylabel('Reward')

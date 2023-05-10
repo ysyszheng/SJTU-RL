@@ -54,18 +54,21 @@ class Trainer_DDPG(object):
         episode_reward += reward
         
         if total_step > self.config['warmup_steps']:
-          self.agent.train(self.replay_buffer, self.config['num_epochs'])
+          self.agent.update(self.replay_buffer, self.config['num_epochs'])
         if terminated or truncated:
           break
       
-      bar.set_description('Episode: {}/{} | Episode Reward: {:.2f}'.
-                          format(episode, self.config['num_episodes'], episode_reward))
+      bar.set_description('Episode: {}/{} | Episode Reward: {:.2f} | Terminal: {}'.
+                          format(episode, self.config['num_episodes'], episode_reward, terminated))
       r.append(episode_reward)
     
-    plt.figure(figsize=(10, 5))
+    plt.figure()
     plt.plot(r)
     plt.xlabel('Episode')
     plt.ylabel('Reward')
     plt.savefig(self.config['images_path'] + '/reward_train.png')
+
+    # save r
+    # np.save(self.config['reward_path'], r)
 
     self.agent.save(self.config['models_path'])

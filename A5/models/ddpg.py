@@ -70,7 +70,7 @@ class DDPG(object):
     state = torch.FloatTensor(state).reshape(1,-1).to(self.device)
     return self.actor.act_with_noise(state, noise)
   
-  def train(self, replay_buffer, iterations):
+  def update(self, replay_buffer, iterations):
     for _ in range(iterations):
       # Sample replay buffer
       s, a, s_, r, d = replay_buffer.sample(self.batch_size)
