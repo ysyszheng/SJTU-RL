@@ -33,7 +33,7 @@ class ActorCritic(nn.Module):
         policy = self.actor(state)
         value = self.critic(state)
         mu = policy * self.max_action
-        sigma = torch.ones_like(mu) * 1e-4
+        sigma = torch.ones_like(mu) * 1e-3
         return (mu, sigma), value
 
     def init_weight(self, nets):

@@ -26,13 +26,13 @@ class Trainer_A3C(object):
         self.beta = self.config['beta']
         self.lambd = self.config['lambda']
         self.value_coef = self.config['value_coef']
-        self.T_max = self.config['T_max']
-        self.t_max = self.config['t_max']
+        self.update_steps = self.config['update_steps']
+        self.total_steps = self.config['total_steps']
         self.num_workers = self.config['num_workers']
         self.max_grad_norm = self.config['max_grad_norm']
 
         # mp
-        self.total_step = mp.Value('i', 0)
+        self.step_cnt = mp.Value('i', 0)
         # self.r_list = mp.Manager().list()
         self.lock = mp.Lock()
 
@@ -53,43 +53,41 @@ class Trainer_A3C(object):
             p.join()
 
         self.global_model.save(self.config['models_path'])
-        # plt.figure()
-        # plt.plot(self.r_list)
-        # plt.xlabel('Episode')
-        # plt.ylabel('Reward')
-        # plt.savefig(self.config['images_path'] + '/reward_train_global.png')
 
     def train_worker(self, rank):
         fix_seed(self.config['seed'] + rank)
         reward_list = []
+        done = True
 
         worker_model = ActorCritic(
             self.state_dim, self.action_dim, self.max_action)
         worker_model.train()
 
-        while self.total_step.value < self.T_max:
-            state, _ = self.env.reset()
+        while self.step_cnt.value < self.total_steps:
             worker_model.load_state_dict(self.global_model.state_dict())
             values, log_probs, rewards, entropies = [], [], [], []
-            done, episode_step = False, 0
+            if done:
+                state, _ = self.env.reset()
+                done, episode_step, episode_reward = False, 0, 0
 
-            while not done:
+            for _ in range(self.update_steps):
                 episode_step += 1
                 (mu, sigma), value = worker_model(torch.from_numpy(state))
                 prob = worker_model.distribution(mu, sigma)
                 action = prob.sample().detach()
                 log_prob = prob.log_prob(action)
                 entropy = prob.entropy().mean()
-                if rank == 0: # TODO: delete
-                    print('mu: {}, sigma: {}, action: {}'.format(mu.data, sigma.data, action.data))
+                # if rank == 0: # TODO: delete
+                #     print('mu: {}, action: {}'.format(mu.item(), action.item()))
 
                 state, reward, terminal, truncated, _ = self.env.step(
                     action.numpy().clip(-self.max_action, self.max_action))
                 done = terminal or truncated
+                episode_reward += reward
 
                 with self.lock:
-                    self.total_step.value += 1
-
+                    self.step_cnt.value += 1
+                
                 values.append(value)
                 log_probs.append(log_prob)
                 rewards.append(reward)
@@ -105,16 +103,17 @@ class Trainer_A3C(object):
             values.append(R)
 
             policy_loss, value_loss = 0, 0
-            gae = torch.zeros(1, 1)
+            # gae = torch.zeros(1, 1)
             for i in reversed(range(len(rewards))):
                 R = self.gamma * R + rewards[i]
                 advantage = R - values[i]
                 value_loss += 0.5 * advantage.pow(2)
+                policy_loss -= (log_probs[i] * advantage.detach() + self.beta * entropies[i])
 
-                delta_t = rewards[i] + self.gamma * \
-                    values[i + 1] - values[i]
-                gae = gae * self.gamma * self.lambd + delta_t
-                policy_loss -= (log_probs[i] * gae.detach() + self.beta * entropies[i])
+                # delta_t = rewards[i] + self.gamma * \
+                #     values[i + 1] - values[i]
+                # gae = gae * self.gamma * self.lambd + delta_t
+                # policy_loss -= (log_probs[i] * gae.detach() + self.beta * entropies[i])
 
             self.optimizer.zero_grad()
             (policy_loss + self.value_coef * value_loss).backward()
@@ -125,10 +124,10 @@ class Trainer_A3C(object):
                     global_param._grad = worker_param.grad
             self.optimizer.step()
 
-            reward_list.append(np.sum(rewards))
-            if rank == 0:
-                print('Episode: {}, Reward: {}'.format(
-                    len(reward_list), reward_list[-1]))
+            if done:
+                reward_list.append(episode_reward)
+                if rank == 0:
+                    print(f'{self.step_cnt.value}/{self.total_steps}, reward: {episode_reward}')
             
         plt.figure()
         plt.plot(reward_list)
