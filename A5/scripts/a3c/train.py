@@ -1,5 +1,6 @@
 import gymnasium as gym
 import torch
+import math
 import numpy as np
 import torch.multiprocessing as mp
 import matplotlib.pyplot as plt
@@ -62,9 +63,10 @@ class Trainer_A3C(object):
         worker_model = ActorCritic(
             self.state_dim, self.action_dim, self.max_action)
         worker_model.train()
+        optimizer = SharedAdam(worker_model.parameters(), lr=self.lr) # TODO
 
         while self.step_cnt.value < self.total_steps:
-            worker_model.load_state_dict(self.global_model.state_dict())
+            # worker_model.load_state_dict(self.global_model.state_dict()) # TODO
             values, log_probs, rewards, entropies = [], [], [], []
             if done:
                 state, _ = self.env.reset()
@@ -73,12 +75,14 @@ class Trainer_A3C(object):
             for _ in range(self.update_steps):
                 episode_step += 1
                 (mu, sigma), value = worker_model(torch.from_numpy(state))
-                prob = worker_model.distribution(mu, sigma)
+                # prob = worker_model.distribution(mu, sigma)
+                prob = torch.distributions.Normal(mu, sigma)
                 action = prob.sample().detach()
                 log_prob = prob.log_prob(action)
                 entropy = prob.entropy().mean()
                 # if rank == 0: # TODO: delete
-                #     print('mu: {}, action: {}'.format(mu.item(), action.item()))
+                #     print('mu: {}, sigma: {}, action: {}, log_prob: {}, entropy: {}'.
+                #           format(mu.item(), sigma.item(), action.item(), log_prob.item(), entropy.item()))
 
                 state, reward, terminal, truncated, _ = self.env.step(
                     action.numpy().clip(-self.max_action, self.max_action))
@@ -115,14 +119,17 @@ class Trainer_A3C(object):
                 # gae = gae * self.gamma * self.lambd + delta_t
                 # policy_loss -= (log_probs[i] * gae.detach() + self.beta * entropies[i])
 
-            self.optimizer.zero_grad()
+            # TODO
+            # self.optimizer.zero_grad()
+            optimizer.zero_grad()
             (policy_loss + self.value_coef * value_loss).backward()
             torch.nn.utils.clip_grad_norm_(
                 worker_model.parameters(), self.max_grad_norm)
-            for global_param, worker_param in zip(self.global_model.parameters(), worker_model.parameters()):
-                if global_param.grad is None:
-                    global_param._grad = worker_param.grad
-            self.optimizer.step()
+            # for global_param, worker_param in zip(self.global_model.parameters(), worker_model.parameters()):
+            #     if global_param.grad is None:
+            #         global_param._grad = worker_param.grad
+            # self.optimizer.step()
+            optimizer.step()
 
             if done:
                 reward_list.append(episode_reward)

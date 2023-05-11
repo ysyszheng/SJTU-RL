@@ -14,8 +14,14 @@ class ActorCritic(nn.Module):
             nn.ReLU(),
             nn.Linear(256, 128),
             nn.ReLU(),
+        )
+        self.mu = nn.Sequential(
             nn.Linear(128, actor_dim),
             nn.Tanh()
+        )
+        self.sigma = nn.Sequential(
+            nn.Linear(128, actor_dim),
+            nn.Softplus()
         )
         self.critic = nn.Sequential(
             nn.Linear(state_dim, 256),
@@ -27,13 +33,13 @@ class ActorCritic(nn.Module):
 
         self.max_action = max_action
         self.distribution = torch.distributions.Normal
-        self.init_weight([self.actor, self.critic])
+        self.init_weight([self.actor, self.critic, self.mu, self.sigma])
 
     def forward(self, state):
         policy = self.actor(state)
         value = self.critic(state)
-        mu = policy * self.max_action
-        sigma = torch.ones_like(mu) * 1e-3
+        mu = self.mu(policy) * self.max_action
+        sigma = self.sigma(policy) + 1e-5
         return (mu, sigma), value
 
     def init_weight(self, nets):

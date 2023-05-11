@@ -1,7 +1,7 @@
 seed: 3407
 num_workers: 4 # mp.cpu_count() = 8
-total_steps: 100000000 # 200 * 1000 = 200000
-update_steps: 20 # update frequency
+total_steps: 200000 # 200 * 1000 = 200000
+update_steps: 50 # update frequency
 test_episodes: 100
 max_steps: 200 # default: 200
 lr: .0001
