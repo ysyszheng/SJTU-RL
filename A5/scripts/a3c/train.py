@@ -128,7 +128,8 @@ class Trainer_A3C(object):
             for global_param, worker_param in zip(self.global_model.parameters(), worker_model.parameters()):
                 if global_param.grad is None:
                     global_param._grad = worker_param.grad
-            # self.optimizer.step()
+            self.optimizer.step()
+            # optimizer.step()
 
             if done:
                 reward_list.append(episode_reward)
