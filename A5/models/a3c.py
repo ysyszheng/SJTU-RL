@@ -54,16 +54,16 @@ class ActorCritic(nn.Module):
         (mu, sigma), _ = self.forward(state)
         return self.distribution(mu.view(1, ).data, sigma.view(1, ).data).sample().numpy()
 
-    # def loss(self, state, action, R, beta=0.01):
-    #     self.train()
-    #     (mu, sigma), value = self.forward(state)
-    #     advantage = R - value
-    #     d = self.distribution(mu, sigma)
-    #     # entropy = d.entropy()
-    #     entropy = 0.5 + 0.5 * math.log(2 * math.pi) + torch.log(d.scale)
-    #     critic_loss = advantage.pow(2)
-    #     action_loss = -(d.log_prob(action) * advantage.detach() + beta * entropy)
-    #     return (critic_loss + action_loss).mean()
+    def loss(self, state, action, R, beta=0.01):
+        self.train()
+        (mu, sigma), value = self.forward(state)
+        advantage = R - value
+        d = self.distribution(mu, sigma)
+        # entropy = d.entropy()
+        entropy = 0.5 + 0.5 * math.log(2 * math.pi) + torch.log(d.scale)
+        critic_loss = advantage.pow(2)
+        action_loss = -(d.log_prob(action) * advantage.detach() + beta * entropy)
+        return (critic_loss + action_loss).mean()
 
     def save(self, path):
         torch.save(self.state_dict(), path + '_actor_critic.pt')
