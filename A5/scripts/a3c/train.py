@@ -34,7 +34,6 @@ class Trainer_A3C(object):
 
         # mp
         self.step_cnt = mp.Value('i', 0)
-        # self.r_list = mp.Manager().list()
         self.lock = mp.Lock()
 
         # model
@@ -63,10 +62,9 @@ class Trainer_A3C(object):
         worker_model = ActorCritic(
             self.state_dim, self.action_dim, self.max_action)
         worker_model.train()
-        # optimizer = SharedAdam(worker_model.parameters(), lr=self.lr) # TODO
 
         while self.step_cnt.value < self.total_steps:
-            worker_model.load_state_dict(self.global_model.state_dict()) # TODO
+            worker_model.load_state_dict(self.global_model.state_dict())
             values, log_probs, rewards, entropies = [], [], [], []
             if done:
                 state, _ = self.env.reset()
@@ -118,9 +116,7 @@ class Trainer_A3C(object):
                 # gae = gae * self.gamma * self.lambd + delta_t
                 # policy_loss -= (log_probs[i] * gae.detach() + self.beta * entropies[i])
 
-            # TODO
             self.optimizer.zero_grad()
-            # optimizer.zero_grad()
             (policy_loss + self.value_coef * value_loss).backward()
             torch.nn.utils.clip_grad_norm_(
                 worker_model.parameters(), self.max_grad_norm)
@@ -128,7 +124,6 @@ class Trainer_A3C(object):
                 if global_param.grad is None:
                     global_param._grad = worker_param.grad
             self.optimizer.step()
-            # optimizer.step()
 
             if done:
                 reward_list.append(episode_reward)
@@ -140,74 +135,3 @@ class Trainer_A3C(object):
         plt.xlabel('Episode')
         plt.ylabel('Reward')
         plt.savefig(self.config['images_path'] + '/reward_train_' + str(rank) + '.png')
-
-    # def train_worker(self, rank):
-    #     fix_seed(self.config['seed'] + rank)
-    #     reward_list = []
-    #     done = True
-    #     t = 1
-
-    #     worker_model = ActorCritic(
-    #         self.state_dim, self.action_dim, self.max_action)
-    #     worker_model.train()
-    #     # optimizer = SharedAdam(worker_model.parameters(), lr=self.lr) # TODO
-
-    #     while self.step_cnt.value < self.total_steps:
-    #         state, _ = self.env.reset()
-    #         state_buf, action_buf, reward_buf = [], [], []
-    #         ep_r = 0
-    #         done = False
-    #         while not done:
-    #             action = worker_model.select_action(torch.from_numpy(state))
-    #             next_state, reward, terminal, truncated, _ = self.env.step(action)
-    #             done = terminal or truncated
-    #             ep_r += reward
-    #             action_buf.append(action)
-    #             state_buf.append(state)
-    #             reward_buf.append(reward)
-
-    #             if t % self.update_steps == 0 or done:
-    #                 _, value = worker_model(torch.from_numpy(next_state))
-    #                 R_buf = []
-    #                 R = 0 if terminal else value.data.numpy()[0]
-    #                 for r in reward_buf[::-1]:
-    #                     R = r + self.gamma * R
-    #                     R_buf.append(R)
-    #                 R_buf.reverse()
-
-    #                 loss = worker_model.loss(torch.from_numpy(np.vstack(state_buf)),
-    #                                         torch.from_numpy(np.vstack(action_buf)),
-    #                                         torch.from_numpy(np.array(R_buf)),
-    #                                         self.beta)
-
-    #                 self.optimizer.zero_grad()
-    #                 loss.backward()
-    #                 torch.nn.utils.clip_grad_norm_(worker_model.parameters(), self.max_grad_norm)
-    #                 for global_param, worker_param in zip(self.global_model.parameters(), worker_model.parameters()):
-    #                     if global_param.grad is None:
-    #                         global_param._grad = worker_param.grad
-    #                 self.optimizer.step()
-    #                 worker_model.load_state_dict(self.global_model.state_dict())
-    #                 state_buf, action_buf, reward_buf = [], [], []
-
-    #                 if done:
-    #                     # r_list.append(total_reward) 
-    #                     # with self.lock:
-    #                     #     self.r_list.append(total_reward)
-    #                     with self.step_cnt.get_lock():
-    #                         self.step_cnt.value += 1
-                        
-    #                     if rank == 0:
-    #                         print('Total steps: {}/{}, Reward: {:.3f}'.format(
-    #                             self.step_cnt.value, self.total_steps, ep_r))
-    #                     break
-
-    #             state = next_state
-    #             t += 1
-
-    #     # plt.figure()
-    #     # plt.plot(r_list)
-    #     # plt.xlabel('Episode')
-    #     # plt.ylabel('Reward')
-    #     # plt.savefig(self.config['images_path'] +
-    #     #             '/reward_train_' + str(rank) + '.png')
