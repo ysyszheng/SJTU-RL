@@ -1,22 +1,50 @@
+SJTU CS3316 Reinforcement Learning
+=====
+
 Env
 -----
+
 ```bash
 pip install gymnasium
 pip install "gymnasium[classic-control]"
 ```
 
-A4 - Mountain Car
+A1 - Iterative Policy Evaluation & Policy Iteration & Value Iteration
 -----
-[Mountain Car](https://gymnasium.farama.org/environments/classic_control/mountain_car/)
+Env: Grid World
+
+```bash
+python3 ./main.py
+```
+
+A2 - First-Visit MC & Every-Visit MC & TD(0)
+-----
+Env: Grid World
+
+```bash
+python3 ./main.py
+```
+
+A3 - Sarsa & Q-learning
+-----
+Env: Cliff Walking
+
+```bash
+python3 ./main.py
+```
+
+A4 - DQN & Double DQN & Dueling DQN
+-----
+Env: [Mountain Car](https://gymnasium.farama.org/environments/classic_control/mountain_car/)
 
 ```bash
 # Train
-python3 ./train.py [Model Name: DQN/DoubleDQN/DuelingDQN]
+python3 ./train.py [Model Name: DQN or DoubleDQN or DuelingDQN]
 # Test
-python3 ./test.py [Model Name: DQN/DoubleDQN/DuelingDQN]
+python3 ./test.py [Model Name: DQN or DoubleDQN or DuelingDQN]
 ```
 
-A5 - Pendulum
+A5 - A3C & DDPG
 -----
 [Pendulum](https://gymnasium.farama.org/environments/classic_control/pendulum/)
 
