@@ -46,7 +46,7 @@ python3 ./test.py [Model Name: DQN or DoubleDQN or DuelingDQN]
 
 A5 - A3C & DDPG
 -----
-[Pendulum](https://gymnasium.farama.org/environments/classic_control/pendulum/)
+Env: [Pendulum](https://gymnasium.farama.org/environments/classic_control/pendulum/)
 
 ```bash
 # Train
@@ -54,3 +54,6 @@ python3 ./run.py --mode train --model [Model Name: A3C or DDPG] --config [Config
 # Test
 python3 ./run.py --mode test --model [Model Name: A3C or DDPG] --config [Config Path: ./config/a3c.yaml or ./config/ddpg.yaml]
 ```
+
+Project
+-----
