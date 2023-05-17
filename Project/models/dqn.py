@@ -1,13 +1,14 @@
 import torch
 import torch.nn as nn
+import numpy as np
 
 class Net(nn.Module):
     def __init__(self, state_dim, action_dim):
         super(Net, self).__init__()
         self.net = nn.Sequential(
-            nn.Conv2d(state_dim, 32, kernel_size=8, stride=4),
+            nn.Conv2d(state_dim, 32, kernel_size=3, stride=1),
             nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=4, stride=2),
+            nn.Conv2d(32, 64, kernel_size=3, stride=1),
             nn.ReLU(),
             nn.Conv2d(64, 64, kernel_size=3, stride=1),
             nn.ReLU(),
@@ -40,10 +41,12 @@ class DQN(object):
         if torch.rand(1) < self.epsilon:
             return torch.randint(self.action_dim, size=(1,))
         else:
+            state = torch.from_numpy(np.array(state) / 255.0).float().unsqueeze(0).to(self.device)
             with torch.no_grad():
                 return self.Q(state).argmax(1)
             
     def act(self, state):
+        state = torch.from_numpy(np.array(state) / 255.0).float().unsqueeze(0).to(self.device)
         with torch.no_grad():
             return self.Q(state).argmax(1)
             
@@ -51,9 +54,9 @@ class DQN(object):
       for _ in range(iterations):
         # Sample replay buffer
         s, a, s_, r, d = replay_buffer.sample(self.batch_size)
-        state = torch.FloatTensor(s).to(self.device)
+        state = torch.from_numpy(np.array(s) / 255.0).float().to(self.device)
         action = torch.FloatTensor(a).to(self.device)
-        next_state = torch.FloatTensor(s_).to(self.device)
+        next_state = torch.from_numpy(np.array(s_) / 255.0).float().to(self.device)
         reward = torch.FloatTensor(r).to(self.device)
         done = torch.FloatTensor(1 - d).to(self.device)
 
