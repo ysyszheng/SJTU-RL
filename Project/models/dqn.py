@@ -13,7 +13,7 @@ class Net(nn.Module):
             nn.Conv2d(64, 64, kernel_size=3, stride=1),
             nn.ReLU(),
             nn.Flatten(),
-            nn.Linear(3136, 512),
+            nn.Linear(64 * 7 * 7, 512),
             nn.ReLU(),
             nn.Linear(512, action_dim)
         )

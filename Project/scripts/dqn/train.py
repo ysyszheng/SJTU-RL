@@ -58,11 +58,10 @@ class Trainer(object):
                 if terminated or truncated:
                     break
 
-            bar.set_description('Episode: {}/{} | Episode Reward: {:.2f} | Terminal: {}'.
-                                format(episode+1, self.config['num_episodes'], episode_reward, terminated))
+            bar.set_description('Episode: {}/{} | Episode Reward: {:.2f} | Truncated: {} | Terminated: {}'.
+                                format(episode+1, self.config['num_episodes'], episode_reward, truncated, terminated))
             r.append(episode_reward)
 
         # save rewards
-        np.save("./out/datas/" + self.config['env'] + "/ddpg.npy", r)
-
-        self.agent.save("./out/models/" + self.config['env'] + "/ddpg")
+        np.save("./out/datas/" + self.config['env'] + "/dqn.npy", r)
+        self.agent.save("./out/models/" + self.config['env'] + "/dqn")

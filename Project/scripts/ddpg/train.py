@@ -2,7 +2,6 @@ import gym
 import torch
 import numpy as np
 from tqdm import tqdm
-import matplotlib.pyplot as plt
 from utils.fix_seed import fix_seed
 from utils.replay_buffer import ReplayBuffer
 from models.ddpg import DDPG
@@ -53,7 +52,7 @@ class Trainer(object):
                 self.replay_buffer.add(
                     (state, action, next_state, reward, terminated))
                 state = next_state
-                episode_reward += reward
+                episode_reward += reward if not truncated else 0 # ignore truncated
 
                 if total_step > self.config['warmup_steps']:
                     self.agent.update(self.replay_buffer,
@@ -61,8 +60,8 @@ class Trainer(object):
                 if terminated or truncated:
                     break
 
-            bar.set_description('Episode: {}/{} | Episode Reward: {:.2f} | Terminal: {}'.
-                                format(episode+1, self.config['num_episodes'], episode_reward, terminated))
+            bar.set_description('Episode: {}/{} | Episode Reward: {:.2f} | Truncated: {} | Terminated: {}'.
+                                format(episode+1, self.config['num_episodes'], episode_reward, truncated, terminated))
             r.append(episode_reward)
 
         # save rewards

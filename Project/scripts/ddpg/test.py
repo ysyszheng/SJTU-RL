@@ -47,4 +47,4 @@ class Tester(object):
                 if terminated or truncated:
                     break
             r.append(episode_reward)
-            print('Episode Reward: {:.2f}'.format(episode_reward))
+            print(f'Episode Reward: {episode_reward}, Truncated: {truncated}, terminated: {terminated}')
