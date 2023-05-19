@@ -17,7 +17,7 @@ class Net(nn.Module):
             nn.MaxPool2d(kernel_size=2, stride=2),
             nn.AdaptiveAvgPool2d((7, 7)),
             nn.Flatten(),
-            nn.Linear(22528, 512),
+            nn.Linear(3136, 512),
             nn.ReLU(True),
             nn.Dropout(),
             nn.Linear(512, action_dim)
