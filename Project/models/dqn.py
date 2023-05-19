@@ -7,14 +7,19 @@ class Net(nn.Module):
         super(Net, self).__init__()
         self.net = nn.Sequential(
             nn.Conv2d(state_dim, 32, kernel_size=8, stride=4),
-            nn.ReLU(),
+            nn.ReLU(True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
             nn.Conv2d(32, 64, kernel_size=4, stride=2),
-            nn.ReLU(),
+            nn.ReLU(True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
             nn.Conv2d(64, 64, kernel_size=3, stride=1),
-            nn.ReLU(),
+            nn.ReLU(True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.AdaptiveAvgPool2d((7, 7)),
             nn.Flatten(),
             nn.Linear(22528, 512),
-            nn.ReLU(),
+            nn.ReLU(True),
+            nn.Dropout(),
             nn.Linear(512, action_dim)
         )
 
