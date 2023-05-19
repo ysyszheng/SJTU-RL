@@ -7,6 +7,7 @@ from utils.fix_seed import fix_seed
 from utils.replay_buffer import ReplayBuffer
 from models.dqn import DQN
 import cv2
+import os
 
 class Trainer(object):
     def __init__(self, config):
@@ -34,6 +35,14 @@ class Trainer(object):
         # model
         self.agent = DQN(self.target_c, self.target_h, self.target_w, action_dim, lr, gamma, epsilon, batch_size, device)
         self.replay_buffer = ReplayBuffer(memory_size)
+
+        # save path
+        self.data_dir = "./out/datas/" + self.config['env']
+        self.model_dir = "./out/models/" + self.config['env']
+        if os.path.exists(self.data_dir) == False:
+            os.makedirs(self.data_dir)
+        if os.path.exists(self.model_dir) == False:
+            os.makedirs(self.model_dir)
 
     def process(self, state):
         state = cv2.cvtColor(state, cv2.COLOR_RGB2GRAY)
@@ -79,5 +88,5 @@ class Trainer(object):
             r.append(episode_reward)
 
         # save rewards
-        np.save("./out/datas/" + self.config['env'] + "/dqn.npy", r)
-        self.agent.save("./out/models/" + self.config['env'] + "/dqn")
+        np.save(self.data_dir, r)
+        self.agent.save(self.model_dir + "/dqn")
