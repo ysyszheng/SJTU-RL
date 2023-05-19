@@ -1,43 +1,44 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import numpy as np
 
 class Net(nn.Module):
-    def __init__(self, state_dim, action_dim):
+    def __init__(self, c, h, w, action_dim):
         super(Net, self).__init__()
-        self.net = nn.Sequential(
-            nn.Conv2d(state_dim, 32, kernel_size=8, stride=4),
-            nn.ReLU(True),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Conv2d(32, 64, kernel_size=4, stride=2),
-            nn.ReLU(True),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Conv2d(64, 64, kernel_size=3, stride=1),
-            nn.ReLU(True),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.AdaptiveAvgPool2d((7, 7)),
-            nn.Flatten(),
-            nn.Linear(3136, 512),
-            nn.ReLU(True),
-            nn.Dropout(),
-            nn.Linear(512, action_dim)
-        )
+        self.conv1 = nn.Conv2d(c, 32, kernel_size=8, stride=4)
+        w, h = self.conv2d_size_calc(w, h, kernel_size=8, stride=4)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
+        w, h = self.conv2d_size_calc(w, h, kernel_size=4, stride=2)
+        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
+        w, h = self.conv2d_size_calc(w, h, kernel_size=3, stride=1)
+        self.fc1 = nn.Linear(w * h * 64, 512)
+        self.fc2 = nn.Linear(512, action_dim)
 
     def forward(self, x):
-        return self.net(x)
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
+        x = F.relu(self.conv3(x))
+        x = F.relu(self.fc1(x.view(x.size(0), -1)))
+        x = self.fc2(x)
+        return x
+
+    def conv2d_size_calc(self, w, h, kernel_size, stride):
+        next_w = (w - (kernel_size - 1) - 1) // stride + 1
+        next_h = (h - (kernel_size - 1) - 1) // stride + 1
+        return next_w, next_h
     
 class DQN(object):
-    def __init__(self, state_dim, action_dim, lr, gamma, 
+    def __init__(self, c, h, w, action_dim, lr, gamma, 
                  epsilon, batch_size, device=torch.device('cpu')):
-        self.state_dim = state_dim
         self.action_dim = action_dim
         self.lr = lr
         self.gamma = gamma
         self.epsilon = epsilon
         self.batch_size = batch_size
         self.device = device
-        self.Q = Net(state_dim, action_dim).to(device)
-        self.Q_target = Net(state_dim, action_dim).to(device)
+        self.Q = Net(c, h, w, action_dim).to(device)
+        self.Q_target = Net(c, h, w, action_dim).to(device)
         self.Q_target.load_state_dict(self.Q.state_dict())
         self.optimizer = torch.optim.Adam(self.Q.parameters(), lr=self.lr)
         self.loss = nn.MSELoss()
@@ -47,13 +48,11 @@ class DQN(object):
             return torch.randint(self.action_dim, size=(1,)).item()
         else:
             state = torch.from_numpy(np.array(state) / 255.0).float().unsqueeze(0).to(self.device)
-            state = state.permute(0, 3, 1, 2)  # Reshape state to (batch_size, channel, height, width)
             with torch.no_grad():
                 return self.Q(state).argmax(1).item()
             
     def act(self, state):
         state = torch.from_numpy(np.array(state) / 255.0).float().unsqueeze(0).to(self.device)
-        state = state.permute(0, 3, 1, 2)  # Reshape state to (batch_size, channel, height, width)
         with torch.no_grad():
             return self.Q(state).argmax(1).item()
             
@@ -62,10 +61,8 @@ class DQN(object):
         # Sample replay buffer
         s, a, s_, r, d = replay_buffer.sample(self.batch_size)
         state = torch.from_numpy(np.array(s) / 255.0).float().to(self.device)
-        state = state.permute(0, 3, 1, 2)  # Reshape state to (batch_size, channel, height, width)
         action = torch.from_numpy(a).long().to(self.device)
         next_state = torch.from_numpy(np.array(s_) / 255.0).float().to(self.device)
-        next_state = next_state.permute(0, 3, 1, 2)  # Reshape state to (batch_size, channel, height, width)
         reward = torch.from_numpy(r).float().to(self.device)
         done = torch.from_numpy(1-d).float().to(self.device)
 

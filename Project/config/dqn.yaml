@@ -12,3 +12,6 @@ memory_size: 1000000
 render: True
 # render: False
 target_update: 100
+target_h: 64
+target_w: 64
+# grayscale: True
