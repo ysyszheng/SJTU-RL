@@ -58,7 +58,6 @@ class DQN(object):
         s, a, s_, r, d = replay_buffer.sample(self.batch_size)
         state = torch.from_numpy(np.array(s) / 255.0).float().to(self.device)
         state = state.permute(0, 3, 1, 2)  # Reshape state to (batch_size, channel, height, width)
-        print(a)
         action = torch.from_numpy(a).long().to(self.device)
         next_state = torch.from_numpy(np.array(s_) / 255.0).float().to(self.device)
         next_state = next_state.permute(0, 3, 1, 2)  # Reshape state to (batch_size, channel, height, width)

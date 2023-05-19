@@ -6,7 +6,11 @@ Env
 
 ```bash
 pip install gymnasium
-pip install "gymnasium[classic-control]"
+pip install 'gymnasium[classic-control]'
+pip install 'gym[atari]'
+pip install 'autorom[accept-rom-license]'
+pip install 'gym[mujoco]'
+pip install 'gym[mujoco_py]'
 ```
 
 A1 - Iterative Policy Evaluation & Policy Iteration & Value Iteration
