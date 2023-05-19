@@ -6,14 +6,14 @@ class Net(nn.Module):
     def __init__(self, state_dim, action_dim):
         super(Net, self).__init__()
         self.net = nn.Sequential(
-            nn.Conv2d(state_dim, 32, kernel_size=3, stride=1),
+            nn.Conv2d(state_dim, 32, kernel_size=8, stride=4),
             nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=3, stride=1),
+            nn.Conv2d(32, 64, kernel_size=4, stride=2),
             nn.ReLU(),
             nn.Conv2d(64, 64, kernel_size=3, stride=1),
             nn.ReLU(),
             nn.Flatten(),
-            nn.Linear(64 * 7 * 7, 512),
+            nn.Linear(22528, 512),
             nn.ReLU(),
             nn.Linear(512, action_dim)
         )
@@ -39,33 +39,38 @@ class DQN(object):
 
     def act_with_noise(self, state):
         if torch.rand(1) < self.epsilon:
-            return torch.randint(self.action_dim, size=(1,))
+            return torch.randint(self.action_dim, size=(1,)).item()
         else:
             state = torch.from_numpy(np.array(state) / 255.0).float().unsqueeze(0).to(self.device)
+            state = state.permute(0, 3, 1, 2)  # Reshape state to (batch_size, channel, height, width)
             with torch.no_grad():
-                return self.Q(state).argmax(1)
+                return self.Q(state).argmax(1).item()
             
     def act(self, state):
         state = torch.from_numpy(np.array(state) / 255.0).float().unsqueeze(0).to(self.device)
+        state = state.permute(0, 3, 1, 2)  # Reshape state to (batch_size, channel, height, width)
         with torch.no_grad():
-            return self.Q(state).argmax(1)
+            return self.Q(state).argmax(1).item()
             
     def update(self, replay_buffer, iterations):
       for _ in range(iterations):
         # Sample replay buffer
         s, a, s_, r, d = replay_buffer.sample(self.batch_size)
         state = torch.from_numpy(np.array(s) / 255.0).float().to(self.device)
-        action = torch.FloatTensor(a).to(self.device)
+        state = state.permute(0, 3, 1, 2)  # Reshape state to (batch_size, channel, height, width)
+        print(a)
+        action = torch.from_numpy(a).long().to(self.device)
         next_state = torch.from_numpy(np.array(s_) / 255.0).float().to(self.device)
-        reward = torch.FloatTensor(r).to(self.device)
-        done = torch.FloatTensor(1 - d).to(self.device)
+        next_state = next_state.permute(0, 3, 1, 2)  # Reshape state to (batch_size, channel, height, width)
+        reward = torch.from_numpy(r).float().to(self.device)
+        done = torch.from_numpy(1-d).float().to(self.device)
 
         # Compute the target Q value
         target_Q = self.Q_target(next_state).max(1)[0].unsqueeze(1)
         target_Q = reward + (done * self.gamma * target_Q).detach()
 
         # Get current Q estimate
-        current_Q = self.Q(state).gather(1, action.long())
+        current_Q = self.Q(state).gather(1, action.unsqueeze(1))
 
         # Compute Q loss
         loss = self.loss(current_Q, target_Q)

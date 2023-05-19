@@ -16,7 +16,7 @@ class Trainer(object):
         fix_seed(self.config['seed'])
 
         # params
-        state_dim = self.env.observation_space.shape[0]
+        state_dim = self.env.observation_space.shape[2]
         action_dim = self.env.action_space.n
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         lr = self.config['lr']
