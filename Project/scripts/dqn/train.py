@@ -46,7 +46,7 @@ class Trainer(object):
 
     def process(self, state):
         state = cv2.cvtColor(state, cv2.COLOR_RGB2GRAY)
-        state = cv2.resize(state, (self.target_h, self.target_w), interpolation=cv2.INTER_AREA)
+        state = cv2.resize(state, (self.target_w, self.target_h), interpolation=cv2.INTER_AREA)
         state = np.expand_dims(state, axis=0)
         # state = np.transpose(state, (2, 0, 1))
         # state = torch.from_numpy(state).float()

@@ -1,5 +1,5 @@
 seed: 3407
-num_episodes: 500
+num_episodes: 1000
 test_episodes: 100
 num_epochs: 1
 warmup_steps: 100 # need to be greater than batch_size
@@ -12,6 +12,6 @@ memory_size: 1000000
 render: True
 # render: False
 target_update: 100
-target_h: 64
+target_h: 84
 target_w: 64
 # grayscale: True
