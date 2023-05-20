@@ -47,12 +47,12 @@ class DQN(object):
         if torch.rand(1) < self.epsilon:
             return torch.randint(self.action_dim, size=(1,)).item()
         else:
-            state = torch.from_numpy(np.array(state) / 255.0).float().unsqueeze(0).to(self.device)
+            state = torch.from_numpy(np.array(state)).float().unsqueeze(0).to(self.device)
             with torch.no_grad():
                 return self.Q(state).argmax(1).item()
             
     def act(self, state):
-        state = torch.from_numpy(np.array(state) / 255.0).float().unsqueeze(0).to(self.device)
+        state = torch.from_numpy(np.array(state)).float().unsqueeze(0).to(self.device)
         with torch.no_grad():
             return self.Q(state).argmax(1).item()
             
@@ -60,9 +60,9 @@ class DQN(object):
       for _ in range(iterations):
         # Sample replay buffer
         s, a, s_, r, d = replay_buffer.sample(self.batch_size)
-        state = torch.from_numpy(np.array(s) / 255.0).float().to(self.device)
+        state = torch.from_numpy(np.array(s)).float().to(self.device)
         action = torch.from_numpy(a).long().to(self.device)
-        next_state = torch.from_numpy(np.array(s_) / 255.0).float().to(self.device)
+        next_state = torch.from_numpy(np.array(s_)).float().to(self.device)
         reward = torch.from_numpy(r).float().to(self.device)
         done = torch.from_numpy(1-d).float().to(self.device)
 
