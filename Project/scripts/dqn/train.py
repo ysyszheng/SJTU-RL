@@ -27,12 +27,12 @@ class Trainer(object):
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         lr = self.config['lr']
         gamma = self.config['gamma']
-        epsilon = self.config['epsilon']
         batch_size = self.config['batch_size']
         memory_size = self.config['memory_size']
         
         # model
-        self.agent = DQN(self.target_c, self.target_h, self.target_w, action_dim, lr, gamma, epsilon, batch_size, device)
+        self.agent = DQN(self.target_c, self.target_h, self.target_w, action_dim, lr, gamma, 
+                         config['epsilon_min'], config['epsilon_decay'], batch_size, device)
         self.replay_buffer = ReplayBuffer(memory_size)
 
         # save path
@@ -46,9 +46,9 @@ class Trainer(object):
     def process(self, state):
         state = cv2.cvtColor(state, cv2.COLOR_RGB2GRAY)
         state = cv2.resize(state, (self.target_w, self.target_h), interpolation=cv2.INTER_AREA)
-        state = np.expand_dims(state, axis=0) / 255.0
-        # state = np.transpose(state, (2, 0, 1))
-        # state = torch.from_numpy(state).float()
+        state = np.expand_dims(state, axis=0)
+        state = state / 255.0
+        # print(state) # TODO: delete
         return state
 
     def train(self):
@@ -65,7 +65,7 @@ class Trainer(object):
             while True:
                 total_step += 1
                 action = self.agent.act_with_noise(state)
-
+                # print(action) # TODO: delete
                 next_state, reward, terminated, truncated, _ = self.env.step(
                     action)
                 next_state = self.process(next_state)
@@ -77,8 +77,10 @@ class Trainer(object):
                 if total_step > self.config['warmup_steps']:
                     self.agent.update(self.replay_buffer,
                                       self.config['num_epochs'])
+                    # print("update")
                 if total_step % self.config['target_update'] == 0:
                     self.agent.update_target()
+                    # print("update target")
                 if terminated or truncated:
                     break
 

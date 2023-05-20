@@ -8,12 +8,16 @@ class Net(nn.Module):
         super(Net, self).__init__()
         self.conv1 = nn.Conv2d(c, 32, kernel_size=8, stride=4)
         w, h = self.conv2d_size_calc(w, h, kernel_size=8, stride=4)
+        # print(h,w) # TODO: delete
         self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
         w, h = self.conv2d_size_calc(w, h, kernel_size=4, stride=2)
+        # print(h,w) # TODO: delete
         self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
         w, h = self.conv2d_size_calc(w, h, kernel_size=3, stride=1)
+        # print(h,w) # TODO: delete
         self.fc1 = nn.Linear(w * h * 64, 512)
         self.fc2 = nn.Linear(512, action_dim)
+        self._init_weights()
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
@@ -27,19 +31,27 @@ class Net(nn.Module):
         next_w = (w - (kernel_size - 1) - 1) // stride + 1
         next_h = (h - (kernel_size - 1) - 1) // stride + 1
         return next_w, next_h
+
+    def _init_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
+                nn.init.kaiming_uniform_(m.weight.data)
+                nn.init.zeros_(m.bias.data)
     
 class DQN(object):
-    def __init__(self, c, h, w, action_dim, lr, gamma, 
-                 epsilon, batch_size, device=torch.device('cpu')):
+    def __init__(self, c, h, w, action_dim, lr, gamma, epsilon_min,
+                 epsilon_decay, batch_size, device=torch.device('cpu')):
         self.action_dim = action_dim
         self.lr = lr
         self.gamma = gamma
-        self.epsilon = epsilon
+        self.epsilon_min = epsilon_min
+        self.epsilon_decay = epsilon_decay
+        self.epsilon = 1.0
         self.batch_size = batch_size
         self.device = device
         self.Q = Net(c, h, w, action_dim).to(device)
         self.Q_target = Net(c, h, w, action_dim).to(device)
-        self.Q_target.load_state_dict(self.Q.state_dict())
+        self.update_target()
         self.optimizer = torch.optim.Adam(self.Q.parameters(), lr=self.lr)
         self.loss = nn.MSELoss()
 
@@ -48,6 +60,7 @@ class DQN(object):
             return torch.randint(self.action_dim, size=(1,)).item()
         else:
             state = torch.from_numpy(np.array(state)).float().unsqueeze(0).to(self.device)
+            # print(state.shape) # TODO: delete
             with torch.no_grad():
                 return self.Q(state).argmax(1).item()
             
@@ -80,6 +93,9 @@ class DQN(object):
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
+
+        # Update epsilon
+        self.epsilon = max(self.epsilon_min, self.epsilon_decay * self.epsilon)
 
     def update_target(self):
         self.Q_target.load_state_dict(self.Q.state_dict())

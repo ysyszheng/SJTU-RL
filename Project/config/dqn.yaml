@@ -6,7 +6,8 @@ warmup_steps: 100 # need to be greater than batch_size
 max_steps: 1000 # default: 1000
 lr: .0001
 gamma: .9
-epsilon: .01
+epsilon_min: .01
+epsilon_decay: .995
 batch_size: 64
 memory_size: 1000000
 render: True
