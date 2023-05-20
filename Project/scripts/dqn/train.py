@@ -2,7 +2,6 @@ import gym
 import torch
 import numpy as np
 from tqdm import tqdm
-import matplotlib.pyplot as plt
 from utils.fix_seed import fix_seed
 from utils.replay_buffer import ReplayBuffer
 from models.dqn import DQN
@@ -71,7 +70,7 @@ class Trainer(object):
                     action)
                 next_state = self.process(next_state)
                 self.replay_buffer.add(
-                    (state, action, next_state, reward, terminated))
+                    (state, action, next_state, reward, terminated or truncated))
                 state = next_state
                 episode_reward += reward
 
@@ -88,5 +87,5 @@ class Trainer(object):
             r.append(episode_reward)
 
         # save rewards
-        np.save(self.data_dir, r)
-        self.agent.save(self.model_dir + "/dqn")
+        np.save(self.data_dir + "/dqn.npy", r)
+        self.agent.save(self.model_dir + "/dqn.pt")

@@ -84,9 +84,14 @@ class DQN(object):
     def update_target(self):
         self.Q_target.load_state_dict(self.Q.state_dict())
 
+    def set_eval(self):
+        self.Q.eval()
+        self.Q_target.eval()
+
     def save(self, path):
+        # torch.save(self.Q.to('cpu').state_dict(), path)
         torch.save(self.Q.state_dict(), path)
 
     def load(self, path):
-        self.Q.load_state_dict(torch.load(path))
-        self.Q_target.load_state_dict(torch.load(path))
+        self.Q.load_state_dict(torch.load(path, map_location=torch.device('cpu')))
+        self.Q_target.load_state_dict(torch.load(path, map_location=torch.device('cpu')))

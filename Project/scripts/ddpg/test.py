@@ -1,5 +1,5 @@
 import torch
-import gymnasium as gym
+import gym
 from models.ddpg import DDPG
 from utils.fix_seed import fix_seed
 
