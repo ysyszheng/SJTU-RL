@@ -5,7 +5,7 @@ import numpy as np
 from tqdm import tqdm
 from utils.fix_seed import fix_seed
 from utils.replay_buffer import ReplayBuffer
-from models.ddqn import DDQN
+from models.d3qn import D3QN
 import os
 
 class Trainer(object):
@@ -33,7 +33,7 @@ class Trainer(object):
         memory_size = self.config['memory_size']
         
         # model
-        self.agent = DDQN(self.c, self.h, self.w, action_dim, lr, gamma, 
+        self.agent = D3QN(self.c, self.h, self.w, action_dim, lr, gamma, 
                          config['epsilon_min'], config['epsilon_decay'], batch_size, device)
         self.replay_buffer = ReplayBuffer(memory_size)
 
@@ -91,5 +91,5 @@ class Trainer(object):
             r.append(episode_reward)
 
         # save rewards
-        np.save(self.data_dir + "/ddqn.npy", r)
-        self.agent.save(self.model_dir + "/ddqn.pt")
+        np.save(self.data_dir + "/d3qn.npy", r)
+        self.agent.save(self.model_dir + "/d3qn.pt")
