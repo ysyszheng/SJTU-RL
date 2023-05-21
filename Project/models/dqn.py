@@ -23,7 +23,8 @@ class Net(nn.Module):
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
         x = F.relu(self.conv3(x))
-        x = F.relu(self.fc1(x.view(x.size(0), -1)))
+        x = x.view(x.size(0), -1)
+        x = F.relu(self.fc1(x))
         x = self.fc2(x)
         return x
 
@@ -51,6 +52,7 @@ class DQN(object):
         self.device = device
         self.Q = Net(c, h, w, action_dim).to(device)
         self.Q_target = Net(c, h, w, action_dim).to(device)
+        self.Q_target.eval()
         self.update_target()
         self.optimizer = torch.optim.Adam(self.Q.parameters(), lr=self.lr)
         self.loss = nn.MSELoss()
@@ -85,6 +87,9 @@ class DQN(object):
 
         # Get current Q estimate
         current_Q = self.Q(state).gather(1, action.unsqueeze(1))
+        
+        # print(current_Q, target_Q) # TODO: delete
+        # print(reward) # TODO:
 
         # Compute Q loss
         loss = self.loss(current_Q, target_Q)

@@ -1,11 +1,11 @@
 import gym
+from gym.wrappers import AtariPreprocessing
 import torch
 import numpy as np
 from tqdm import tqdm
 from utils.fix_seed import fix_seed
 from utils.replay_buffer import ReplayBuffer
 from models.dqn import DQN
-import cv2
 import os
 
 class Trainer(object):
@@ -14,15 +14,18 @@ class Trainer(object):
         self.config = config
         # self.env = gym.make(config['env'], max_episode_steps=self.config['max_steps'])
         self.env = gym.make(config['env'])
+        self.env = AtariPreprocessing(self.env, scale_obs=True) # TODO: need FrameStack?
         fix_seed(self.config['seed'])
 
         # params
+        print(self.env.observation_space.shape)
+        self.c = 1
         self.h = self.env.observation_space.shape[0]
         self.w = self.env.observation_space.shape[1]
-        self.c = self.env.observation_space.shape[2]
-        self.target_h = self.config['target_h']
-        self.target_w = self.config['target_w']
-        self.target_c = 1
+        # print(self.env.observation_space.shape)
+        # self.target_h = self.config['target_h']
+        # self.target_w = self.config['target_w']
+        # self.target_c = 1
         action_dim = self.env.action_space.n
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         lr = self.config['lr']
@@ -31,7 +34,7 @@ class Trainer(object):
         memory_size = self.config['memory_size']
         
         # model
-        self.agent = DQN(self.target_c, self.target_h, self.target_w, action_dim, lr, gamma, 
+        self.agent = DQN(self.c, self.h, self.w, action_dim, lr, gamma, 
                          config['epsilon_min'], config['epsilon_decay'], batch_size, device)
         self.replay_buffer = ReplayBuffer(memory_size)
 
@@ -44,10 +47,9 @@ class Trainer(object):
             os.makedirs(self.model_dir)
 
     def process(self, state):
-        state = cv2.cvtColor(state, cv2.COLOR_RGB2GRAY)
-        state = cv2.resize(state, (self.target_w, self.target_h), interpolation=cv2.INTER_AREA)
+        # state = cv2.cvtColor(state, cv2.COLOR_RGB2GRAY)
+        # state = cv2.resize(state, (self.target_w, self.target_h), interpolation=cv2.INTER_AREA)
         state = np.expand_dims(state, axis=0)
-        state = state / 255.0
         # print(state) # TODO: delete
         return state
 
@@ -68,6 +70,7 @@ class Trainer(object):
                 # print(action) # TODO: delete
                 next_state, reward, terminated, truncated, _ = self.env.step(
                     action)
+                # print(reward) # TODO: delete
                 next_state = self.process(next_state)
                 self.replay_buffer.add(
                     (state, action, next_state, reward, terminated or truncated))
