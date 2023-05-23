@@ -1,5 +1,5 @@
 import gym
-from gym.wrappers import AtariPreprocessing
+from gym.wrappers import AtariPreprocessing, FrameStack
 import torch
 import numpy as np
 from tqdm import tqdm
@@ -15,12 +15,13 @@ class Trainer(object):
         # self.env = gym.make(config['env'], max_episode_steps=self.config['max_steps'])
         self.env = gym.make(config['env'])
         self.env = AtariPreprocessing(self.env, scale_obs=True) # TODO: need FrameStack?
+        self.env = FrameStack(self.env, num_stack=4)
         fix_seed(self.config['seed'])
 
         # params
-        self.c = 1
-        self.h = self.env.observation_space.shape[0]
-        self.w = self.env.observation_space.shape[1]
+        self.c = self.env.observation_space.shape[0]
+        self.h = self.env.observation_space.shape[1]
+        self.w = self.env.observation_space.shape[2]
         # print(self.env.observation_space.shape)
         # self.target_h = self.config['target_h']
         # self.target_w = self.config['target_w']
@@ -48,8 +49,8 @@ class Trainer(object):
     def process(self, state):
         # state = cv2.cvtColor(state, cv2.COLOR_RGB2GRAY)
         # state = cv2.resize(state, (self.target_w, self.target_h), interpolation=cv2.INTER_AREA)
-        state = np.expand_dims(state, axis=0)
-        # print(state) # TODO: delete
+        # state = np.expand_dims(state, axis=0)
+        # print(state.shape) # TODO: delete
         return state
 
     def train(self):
@@ -59,7 +60,7 @@ class Trainer(object):
 
         for episode in bar:
             state, _ = self.env.reset()
-            state = self.process(state)
+            # state = self.process(state)
             # state, _ = self.env.reset(seed = self.config['seed'] + episode)
             episode_reward = 0
 
@@ -70,7 +71,7 @@ class Trainer(object):
                 next_state, reward, terminated, truncated, _ = self.env.step(
                     action)
                 # print(reward) # TODO: delete
-                next_state = self.process(next_state)
+                # next_state = self.process(next_state)
                 self.replay_buffer.add(
                     (state, action, next_state, reward, terminated or truncated))
                 state = next_state

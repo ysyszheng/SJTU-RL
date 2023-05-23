@@ -6,6 +6,7 @@ import numpy as np
 class Net(nn.Module):
     def __init__(self, c, h, w, action_dim):
         super(Net, self).__init__()
+        # print(h, w)
         self.conv1 = nn.Conv2d(c, 32, kernel_size=8, stride=4)
         w, h = self.conv2d_size_calc(w, h, kernel_size=8, stride=4)
         # print(h,w) # TODO: delete

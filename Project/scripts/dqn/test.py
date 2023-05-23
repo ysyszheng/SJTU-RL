@@ -1,8 +1,8 @@
 import torch
 import gym
+from gym.wrappers import AtariPreprocessing
 from models.dqn import DQN
 from utils.fix_seed import fix_seed
-import cv2
 import numpy as np
 
 class Tester(object):
@@ -15,30 +15,27 @@ class Tester(object):
         else:
             # self.env = gym.make(config['env'], max_episode_steps=config['max_steps'])
             self.env = gym.make(config['env'])
+        self.env = AtariPreprocessing(self.env, scale_obs=True) # TODO: need FrameStack?
         fix_seed(self.config['seed'] + 666)
 
         # params
-        self.h = self.env.observation_space.shape[0]
-        self.w = self.env.observation_space.shape[1]
-        self.c = self.env.observation_space.shape[2]
-        self.target_h = self.config['target_h']
-        self.target_w = self.config['target_w']
-        self.target_c = 1
+        self.h = 84
+        self.w = 84
+        self.c = 1
         action_dim = self.env.action_space.n
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         lr = self.config['lr']
         gamma = self.config['gamma']
-        epsilon = self.config['epsilon']
         batch_size = self.config['batch_size']
-        memory_size = self.config['memory_size']
         
         # model
-        self.agent = DQN(self.target_c, self.target_h, self.target_w, action_dim, lr, gamma, epsilon, batch_size, device)
-        self.agent.load("./out/models/" + self.config['env'] + "/dqn.pt")
+        self.agent = DQN(self.c, self.h, self.w, action_dim, lr, gamma, 
+                          config['epsilon_min'], config['epsilon_decay'], batch_size, device)
+        self.agent.load("./out/models/" + self.config['env'] + "/ddqn.pt")
 
     def process(self, state):
-        state = cv2.cvtColor(state, cv2.COLOR_RGB2GRAY)
-        state = cv2.resize(state, (self.target_w, self.target_h), interpolation=cv2.INTER_AREA)
+        # state = cv2.cvtColor(state, cv2.COLOR_RGB2GRAY)
+        # state = cv2.resize(state, (self.w, self.h), interpolation=cv2.INTER_AREA)
         state = np.expand_dims(state, axis=0)
         # state = np.transpose(state, (2, 0, 1))
         # state = torch.from_numpy(state).float()
@@ -54,7 +51,7 @@ class Tester(object):
             episode_reward = 0
             while True:
                 action = self.agent.act(state)
-                print(action)
+                # print(action)
                 next_state, reward, terminated, truncated, _ = self.env.step(
                     action)
                 state = self.process(next_state)
