@@ -21,14 +21,17 @@ class Trainer(object):
         max_action = float(self.env.action_space.high[0])
         device = torch.device('cpu')
         lr = self.config['lr']
-        gamma = self.config['gamma']
-        tau = self.config['tau']
-        batch_size = self.config['batch_size']
+        self.gamma = self.config['gamma']
+        self.num_epochs = self.config['num_epochs']
+        self.tau = self.config['tau']
+        self.batch_size = self.config['batch_size']
+        self.policy_noise = self.config['policy_noise']
+        self.noise_clip = self.config['noise_clip']
+        self.policy_freq = self.config['policy_freq']
         memory_size = self.config['memory_size']
 
         # model
-        self.agent = SAC(state_dim, action_dim, max_action,
-                          lr, gamma, tau, batch_size, device)
+        self.agent = SAC(state_dim, action_dim, max_action, lr, device)
         self.replay_buffer = ReplayBuffer(memory_size)
 
     def train(self):
@@ -43,9 +46,7 @@ class Trainer(object):
 
             while True:
                 total_step += 1
-                noise = np.random.normal(
-                    0, self.config['noise_std'], size=self.env.action_space.shape[0])
-                action = self.agent.select_action_with_noise(state, noise)
+                action = self.agent.select_action(state)
 
                 next_state, reward, terminated, truncated, _ = self.env.step(
                     action)
@@ -55,8 +56,8 @@ class Trainer(object):
                 episode_reward += reward if not truncated else 0 # ignore truncated
 
                 if total_step > self.config['warmup_steps']:
-                    self.agent.update(self.replay_buffer,
-                                      self.config['num_epochs'])
+                    self.agent.train(self.replay_buffer, self.num_epochs, self.batch_size, 
+                                     self.gamma, self.tau, self.policy_noise, self.noise_clip)
                 if terminated or truncated:
                     break
 
@@ -65,6 +66,6 @@ class Trainer(object):
             r.append(episode_reward)
 
         # save rewards
-        np.save("./out/datas/" + self.config['env'] + "/ddpg.npy", r)
+        np.save("./out/datas/" + self.config['env'] + "/sac.npy", r)
 
-        self.agent.save("./out/models/" + self.config['env'] + "/ddpg")
+        self.agent.save("./out/models/" + self.config['env'] + "/sac")
