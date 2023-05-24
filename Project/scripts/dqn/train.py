@@ -28,7 +28,7 @@ class Trainer(object):
         # self.target_w = self.config['target_w']
         # self.target_c = 1
         action_dim = self.env.action_space.n
-        device = 'cuda:3' if torch.cuda.is_available() else 'cpu'
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
         lr = self.config['lr']
         gamma = self.config['gamma']
         batch_size = self.config['batch_size']
