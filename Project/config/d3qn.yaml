@@ -1,5 +1,5 @@
 seed: 3407
-num_episodes: 500
+num_episodes: 3000 # 500 for pong, 3000 for boxing
 test_episodes: 100
 num_epochs: 1
 warmup_steps: 100 # need to be greater than batch_size

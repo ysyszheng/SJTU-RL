@@ -4,6 +4,7 @@ import torch
 import numpy as np
 from tqdm import tqdm
 from utils.fix_seed import fix_seed
+from utils.wrappers import ClipReward
 from utils.replay_buffer import ReplayBuffer
 from models.dqn import DQN
 import os
@@ -15,6 +16,7 @@ class Trainer(object):
         # self.env = gym.make(config['env'], max_episode_steps=self.config['max_steps'])
         self.env = gym.make(config['env'])
         self.env = AtariPreprocessing(self.env, scale_obs=True) # TODO: need FrameStack?
+        self.env = ClipReward(self.env, -1, 1)
         self.env = FrameStack(self.env, num_stack=4)
         fix_seed(self.config['seed'])
 
@@ -91,6 +93,10 @@ class Trainer(object):
             bar.set_description('Episode: {}/{} | Episode Reward: {:.2f} | Truncated: {} | Terminated: {}'.
                                 format(episode+1, self.config['num_episodes'], episode_reward, truncated, terminated))
             r.append(episode_reward)
+
+            if episode % self.config['save_interval'] == 0:
+                np.save(self.data_dir + f"/dqn_{episode}.npy", r)
+                self.agent.save(self.model_dir + f"/dqn_{episode}.pt")
 
         # save rewards
         np.save(self.data_dir + "/dqn.npy", r)
