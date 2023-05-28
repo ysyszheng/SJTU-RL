@@ -21,17 +21,19 @@ class Trainer(object):
         max_action = float(self.env.action_space.high[0])
         device = torch.device('cpu')
         lr = self.config['lr']
-        self.gamma = self.config['gamma']
         self.num_epochs = self.config['num_epochs']
-        self.tau = self.config['tau']
         self.batch_size = self.config['batch_size']
         self.policy_noise = self.config['policy_noise']
         self.noise_clip = self.config['noise_clip']
         self.policy_freq = self.config['policy_freq']
+        gamma = self.config['gamma']
+        tau = self.config['tau']
+        alpha = self.config['alpha']
         memory_size = self.config['memory_size']
 
         # model
-        self.agent = SAC(state_dim, action_dim, max_action, lr, device)
+        self.agent = SAC(state_dim, action_dim, max_action, 
+                         gamma, tau, alpha, lr, device)
         self.replay_buffer = ReplayBuffer(memory_size)
 
     def train(self):
@@ -56,8 +58,7 @@ class Trainer(object):
                 episode_reward += reward if not truncated else 0 # ignore truncated
 
                 if total_step > self.config['warmup_steps']:
-                    self.agent.train(self.replay_buffer, self.num_epochs, self.batch_size, 
-                                     self.gamma, self.tau, self.policy_noise, self.noise_clip)
+                    self.agent.train(self.replay_buffer, self.num_epochs, self.batch_size) 
                 if terminated or truncated:
                     break
 
