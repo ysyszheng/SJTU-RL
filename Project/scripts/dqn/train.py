@@ -80,11 +80,11 @@ class Trainer(object):
                 state = next_state
                 episode_reward += reward
 
-                if total_step > self.config['warmup_steps']:
+                if total_step > self.config['warmup_steps'] and total_step % self.config['update_freq'] == 0:
                     self.agent.update(self.replay_buffer,
                                       self.config['num_epochs'])
                     # print("update")
-                if total_step % self.config['target_update'] == 0:
+                if total_step > self.config['warmup_steps'] and total_step % self.config['target_update'] == 0:
                     self.agent.update_target()
                     # print("update target")
                 if terminated or truncated:

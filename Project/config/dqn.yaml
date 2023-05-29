@@ -5,15 +5,16 @@ num_epochs: 1
 warmup_steps: 100 # need to be greater than batch_size
 max_steps: 1000 # default: 1000
 lr: .0001
-gamma: .9
+gamma: .99 # 0.9 for pong, 0.99 for boxing
 epsilon_min: .01
 epsilon_decay: .995
-batch_size: 64
-memory_size: 1000000
+batch_size: 32 # 64 for pong, 32 for boxing
+memory_size: 10000 # 1000000 for pong, 10000 for boxing
 render: True
 # render: False
 target_update: 1000 # 100 for pong, 1000 for boxing
 target_h: 84
 target_w: 84
 save_interval: 500
+update_freq: 4
 # grayscale: True
