@@ -3,6 +3,7 @@ import gym
 from gym.wrappers import AtariPreprocessing, FrameStack
 from models.dqn import DQN
 from utils.fix_seed import fix_seed
+from utils.wrappers import ClipReward
 import numpy as np
 
 class Tester(object):
@@ -17,6 +18,7 @@ class Tester(object):
             self.env = gym.make(config['env'])
         self.env = AtariPreprocessing(self.env, scale_obs=True) # TODO: need FrameStack?
         self.env = FrameStack(self.env, num_stack=4)
+        self.env = ClipReward(self.env, -1, 1)
         fix_seed(self.config['seed'] + 666)
 
         # params

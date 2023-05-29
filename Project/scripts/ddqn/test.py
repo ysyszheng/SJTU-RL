@@ -1,8 +1,9 @@
 import torch
 import gym
-from gym.wrappers import AtariPreprocessing
+from gym.wrappers import AtariPreprocessing, FrameStack
 from models.ddqn import DDQN
 from utils.fix_seed import fix_seed
+from utils.wrappers import ClipReward
 import numpy as np
 
 class Tester(object):
@@ -15,13 +16,15 @@ class Tester(object):
         else:
             # self.env = gym.make(config['env'], max_episode_steps=config['max_steps'])
             self.env = gym.make(config['env'])
-        self.env = AtariPreprocessing(self.env, scale_obs=True) # TODO: need FrameStack?
+        self.env = AtariPreprocessing(self.env, scale_obs=True)
+        self.env = FrameStack(self.env, num_stack=4)
+        self.env = ClipReward(self.env, -1, 1)
         fix_seed(self.config['seed'] + 666)
 
         # params
-        self.h = 84
-        self.w = 84
-        self.c = 1
+        self.c = self.env.observation_space.shape[0]
+        self.h = self.env.observation_space.shape[1]
+        self.w = self.env.observation_space.shape[2]
         action_dim = self.env.action_space.n
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         lr = self.config['lr']
@@ -47,14 +50,15 @@ class Tester(object):
 
         for _ in range(self.config['test_episodes']):
             state, _ = self.env.reset()
-            state = self.process(state)
+            # state = self.process(state)
             episode_reward = 0
             while True:
                 action = self.agent.act(state)
                 # print(action)
                 next_state, reward, terminated, truncated, _ = self.env.step(
                     action)
-                state = self.process(next_state)
+                # state = self.process(next_state)
+                state = next_state
                 episode_reward += reward
                 if terminated or truncated:
                     break
