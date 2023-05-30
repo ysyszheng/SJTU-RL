@@ -91,9 +91,9 @@ class Trainer(object):
                                 format(episode+1, self.config['num_episodes'], episode_reward, truncated, terminated))
             r.append(episode_reward)
 
-            if episode % self.config['save_interval'] == 0:
-                np.save(self.data_dir + f"/d3qn_{episode}.npy", r)
-                self.agent.save(self.model_dir + f"/d3qn_{episode}.pt")
+            # if episode % self.config['save_interval'] == 0:
+            #     np.save(self.data_dir + f"/d3qn_{episode}.npy", r)
+            #     self.agent.save(self.model_dir + f"/d3qn_{episode}.pt")
 
         # save rewards
         np.save(self.data_dir + "/d3qn.npy", r)
