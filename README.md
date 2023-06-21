@@ -61,3 +61,10 @@ python3 ./run.py --mode test --model [Model Name: A3C or DDPG] --config [Config 
 
 Project
 -----
+
+```bash
+# Train
+python3 ./run.py --env [Environment Name] --model [Model Name] --config [Config Path] --mode train
+# Test
+python3 ./run.py --env [Environment Name] --model [Model Name] --config [Config Path] --mode test
+```
